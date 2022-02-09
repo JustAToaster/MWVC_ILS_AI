@@ -112,7 +112,7 @@ bool acceptance_criteria(int curr_best_weight, int prev_weight, int curr_weight,
 //Scheduling della variabile epsilon, che definisce la deviazione massima concessa rispetto al migliore attuale
 int epsilon_scheduling(int eps, int curr_weight, int curr_best_weight, int min_weight, int iter){
 	int new_eps;
-	if (curr_weight < curr_best_weight) new_eps = eps - 2*min_weight;
+	if (curr_weight < curr_best_weight) new_eps = eps - 4*min_weight;
 	else new_eps = eps;
 	if (new_eps > min_weight) return new_eps;
 	else return min_weight;
@@ -179,6 +179,115 @@ bool local_search(bool* curr_solution, int& curr_weight, Graph& graph, int n, in
 						curr_weight = curr_local_best_weight;
 						return true;
 					}
+				}
+			}
+		}
+
+		//Aggiornamento soluzione attuale con il migliore vicino
+		copy(curr_local_best_solution, curr_local_best_solution+n, curr_solution);
+		curr_weight = curr_local_best_weight;
+
+		//cout << "Soluzione attuale: " << endl;
+		//print_solution(curr_solution, n);
+		if(VERBOSE_FLAG) cout << "Peso soluzione attuale: " << curr_weight << endl;
+
+		if(curr_weight == prev_weight){
+			if (VERBOSE_FLAG) cout << "Local search numero " << iter << ", iterazione " << ls_iter << ". Bloccato in un ottimo locale. Uscita..." << endl;
+			//print_solution(curr_local_best_solution, n);
+			ls_stuck = true;
+		}
+
+		prev_weight = curr_weight;
+
+	}
+
+	curr_weight = curr_local_best_weight;
+
+	return false;
+}
+
+void separate_nodes(bool* curr_solution, int* present_nodes, int* external_nodes, int& n_present, int& n_external, int n){
+	fill_n(present_nodes, n_present, 0);
+	fill_n(external_nodes, n_external, 0);
+	n_present = n_external = 0;
+	for(int i = 0; i < n; ++i){
+		if(curr_solution[i]){
+			present_nodes[n_present] = i;
+			n_present++;
+		}
+		else{
+			external_nodes[n_external] = i;
+			n_external++;
+		}
+	}
+}
+
+//Local search campionando i vicini ottenuti con lo scambio
+bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph, int n, int num_swaps, int iter, int& num_obj_func_eval, bool VERBOSE_FLAG){
+
+	bool ls_stuck = false;
+	curr_weight = graph.total_weight(curr_solution);
+	num_obj_func_eval++;
+	if(num_obj_func_eval >= MAX_OBJECTIVE_FUNCTION_EVAL) return true;
+	int prev_weight = curr_weight;
+
+	bool curr_local_best_solution[n];
+	copy(curr_solution, curr_solution+n, curr_local_best_solution);
+	int curr_local_best_weight = curr_weight;
+
+	bool neighbor[n];
+	int neighbor_weight = curr_weight;
+
+	int rand_v1, rand_v2;
+
+	int present_nodes[n] = {};
+	int external_nodes[n] = {};
+
+	int n_present = 0;
+	int n_external = 0;
+
+	for(int ls_iter = 1; ls_iter <= MAX_LS_ITER && !ls_stuck; ++ls_iter){
+		if(VERBOSE_FLAG) cout << "Local search numero " << iter << ", iterazione " << ls_iter << ", esploro il vicinato..." << endl;
+
+		separate_nodes(curr_solution, present_nodes, external_nodes, n_present, n_external, n);
+
+		//Esplorazione vicini rimuovendo un elemento dalla soluzione attuale
+		for (int i = 0; i < n; ++i){
+			if (curr_solution[i]){
+				copy(curr_solution, curr_solution+n, neighbor);
+				neighbor[i] = 0;
+			}
+			if (graph.valid_solution(neighbor)){
+				neighbor_weight = curr_weight - graph.get_weight(i);
+				num_obj_func_eval++;
+				if (neighbor_weight < curr_local_best_weight){
+					copy(neighbor, neighbor+n, curr_local_best_solution);
+					curr_local_best_weight = neighbor_weight;
+				}
+				if(num_obj_func_eval >= MAX_OBJECTIVE_FUNCTION_EVAL){
+					copy(curr_local_best_solution, curr_local_best_solution+n, curr_solution);
+					curr_weight = curr_local_best_weight;
+					return true;
+				}
+			}
+		}
+		//Esplorazione vicini scambiando un elemento della soluzione attuale con uno non presente
+		for(int i = 0; i < num_swaps; ++i){
+			rand_v1 = present_nodes[rand() % n_present];
+			rand_v2 = external_nodes[rand() % n_external];
+			neighbor[rand_v1] = 0;
+			neighbor[rand_v2] = 1;
+			if (graph.valid_solution(neighbor)){
+				neighbor_weight = curr_weight - graph.get_weight(rand_v1) + graph.get_weight(rand_v2);
+				num_obj_func_eval++;
+				if (neighbor_weight < curr_local_best_weight){
+					copy(neighbor, neighbor+n, curr_local_best_solution);
+					curr_local_best_weight = neighbor_weight;
+				}
+				if(num_obj_func_eval >= MAX_OBJECTIVE_FUNCTION_EVAL){
+					copy(curr_local_best_solution, curr_local_best_solution+n, curr_solution);
+					curr_weight = curr_local_best_weight;
+					return true;
 				}
 			}
 		}

@@ -110,6 +110,10 @@ int main(int argc, char *argv[]){
 	int num_elems_changed = n >> 6;
 	if(num_elems_changed == 0) num_elems_changed = pert_min_changes;
 
+	int num_swaps = n >> 3;
+	if (num_swaps == 0) num_swaps = 1;
+
+	cout << "Numero sostituzioni per iterazione della local search: " << num_swaps << endl;
 	cout << "Valore iniziale di epsilon: " << eps << ", peso minimo: " << min_weight << endl;
 	cout << "Numero di cambiamenti iniziali in una perturbazione: " << num_elems_changed << endl;
 	cout << "Numero di cambiamenti minimi in una perturbazione: " << pert_min_changes << endl << endl;
@@ -127,7 +131,9 @@ int main(int argc, char *argv[]){
 		}
 
 		//Calcola l'ottimo locale a partire dalla soluzione attuale
-		max_eval_reached = local_search(curr_solution, curr_weight, graph, n, iter, num_obj_func_eval, VERBOSE_FLAG);
+		//max_eval_reached = local_search(curr_solution, curr_weight, graph, n, iter, num_obj_func_eval, VERBOSE_FLAG);
+		
+		max_eval_reached = local_search_stochastic(curr_solution, curr_weight, graph, n, num_swaps, iter, num_obj_func_eval, VERBOSE_FLAG);
 
 		if(max_eval_reached){
 			cout << "Esaurito il numero massimo di valutazioni della funzione obiettivo. Uscita..." << endl;
@@ -168,6 +174,8 @@ int main(int argc, char *argv[]){
 	end_opt = clock();
 	double runtime_ms = (end_opt - start_opt)*1.0e3/CLOCKS_PER_SEC;
 	cout << "Terminato ciclo di ottimizzazione in " << runtime_ms << " ms." << endl;
+
+	cout << "Valore finale di epsilon: " << eps << ", num cambiamenti in una perturbazione: " << num_elems_changed << endl;
 
 	cout << "Numero valutazioni della funzione obiettivo: " << num_obj_func_eval << endl;
 	cout << "Soluzione migliore trovata: " << endl;
