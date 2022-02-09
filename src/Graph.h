@@ -17,7 +17,7 @@ class Graph{
 
 		int *w;	//Funzione peso dei nodi
 
-		int *degrees; //Degree dei nodi
+		float *degree_over_weight; //Rapporto grado/peso dei nodi
 		
 	public:
 		Graph();
@@ -38,7 +38,7 @@ class Graph{
 		
 		int total_weight(bool* solution);
 				
-		void compute_degrees();
+		void compute_degree_weight_ratio();
 
 		bool valid_solution(bool* solution);
 

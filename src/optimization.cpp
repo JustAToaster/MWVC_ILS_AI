@@ -29,14 +29,29 @@ bool Graph::valid_solution(bool* solution){
 	return true;
 }
 
-//Per ogni arco non coperto, inserisci l'estremo con degree piu' alto
+
+void Graph::compute_degree_weight_ratio(){
+	degree_over_weight = new float[n]();
+	int degrees[n];
+	fill_n(degrees, n, 0);
+	pair<int, int> edge;
+	for(int i = 0; i < num_edges; ++i){
+		edge = edges[i];
+		degrees[edge.first]++;
+	}
+	for(int i = 0; i < n; ++i){
+		degree_over_weight[i] = (float)degrees[i]/w[i];
+	}
+}
+
+//Per ogni arco non coperto, inserisci l'estremo con rapporto degree/peso piu' alto
 void Graph::greedy_solution(bool* solution){
-	compute_degrees();
+	compute_degree_weight_ratio();
 	pair<int, int> edge;
 	for(int i = 0; i < num_edges; ++i){
 		edge = edges[i];
 		if (!solution[edge.first] && !solution[edge.second]){
-			if (degrees[edge.first] > degrees[edge.second]) solution[edge.first] = 1;
+			if (degree_over_weight[edge.first] > degree_over_weight[edge.second]) solution[edge.first] = 1;
 			else solution[edge.second] = 1;
 		}
 	}
@@ -48,22 +63,22 @@ void Graph::fix_invalid_solution(bool* solution){
 	for(int i = 0; i < num_edges; ++i){
 		edge = edges[i];
 		if (!solution[edge.first] && !solution[edge.second]){
-			if (degrees[edge.first] > degrees[edge.second]) solution[edge.first] = 1;
+			if (degree_over_weight[edge.first] > degree_over_weight[edge.second]) solution[edge.first] = 1;
 			else solution[edge.second] = 1;
 		}
 	}
 }
 
-//Per ogni arco non coperto, il nodo tra i due da aggiungere alla soluzione viene scelto con probabilita' proporzionale al degree
+//Per ogni arco non coperto, il nodo tra i due da aggiungere alla soluzione viene scelto con probabilita' proporzionale al rapporto degree/peso
 //Sembra dare risultati peggiori
 void Graph::fix_invalid_solution_stochastic(bool* solution){
 	pair<int, int> edge;
-	int sum_degrees;
+	float first_node_prob;
 	for(int i = 0; i < num_edges; ++i){
 		edge = edges[i];
 		if (!solution[edge.first] && !solution[edge.second]){
-			sum_degrees = degrees[edge.first] + degrees[edge.second];
-			if ((rand() % sum_degrees + 1) <= degrees[edge.first]) solution[edge.first] = 1;
+			first_node_prob = degree_over_weight[edge.first]/(degree_over_weight[edge.first] + degree_over_weight[edge.second]);
+			if (rand()/RAND_MAX <= first_node_prob) solution[edge.first] = 1;
 			else solution[edge.second] = 1;
 		}
 	}

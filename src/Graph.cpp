@@ -14,7 +14,7 @@ Graph::Graph(){
 
 Graph::~Graph(){
 	delete w;
-	delete degrees;
+	delete degree_over_weight;
 	delete edges;
 }
 
@@ -44,16 +44,6 @@ int Graph::get_weight(int i){
 
 int Graph::min_weight(){
 	return *min_element(w, w + n);
-}
-
-void Graph::compute_degrees(){
-	degrees = new int[n];
-	fill_n(degrees, n, 0);
-	pair<int, int> edge;
-	for(int i = 0; i < num_edges; ++i){
-		edge = edges[i];
-		degrees[edge.first]++;
-	}
 }
 
 void Graph::print_edges(){
