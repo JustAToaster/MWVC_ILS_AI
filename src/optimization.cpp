@@ -271,10 +271,11 @@ bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph
 				}
 			}
 		}
-		//Esplorazione vicini scambiando un elemento della soluzione attuale con uno non presente
+		//Esplorazione vicini scambiando un elemento della soluzione attuale con uno non presente che migliora il peso
 		for(int i = 0; i < num_swaps; ++i){
 			rand_v1 = present_nodes[rand() % n_present];
 			rand_v2 = external_nodes[rand() % n_external];
+			if(graph.get_weight(rand_v2) >= graph.get_weight(rand_v1)) continue;
 			neighbor[rand_v1] = 0;
 			neighbor[rand_v2] = 1;
 			if (graph.valid_solution(neighbor)){
