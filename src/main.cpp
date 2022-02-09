@@ -75,13 +75,14 @@ int main(int argc, char *argv[]){
 
 	//Soluzione banale, tutti i nodi. In alcuni casi potrebbe essere un miglior punto di partenza di quella greedy.
 	//fill_n(curr_solution, n, 1);
+	//graph.compute_degree_weight_ratio();
 
 	//Soluzione greedy
 	fill_n(curr_solution, n, 0);
 	graph.greedy_solution(curr_solution);
 
 	bool* curr_best_solution = new bool[n];
-	fill_n(curr_best_solution, n, 1);
+	copy(curr_solution, curr_solution+n, curr_best_solution);
 
 	int curr_weight = graph.total_weight(curr_solution);
 	print_solution(curr_solution, n);
@@ -110,7 +111,7 @@ int main(int argc, char *argv[]){
 	int num_elems_changed = n >> 6;
 	if(num_elems_changed == 0) num_elems_changed = pert_min_changes;
 
-	int num_swaps = n >> 3;
+	int num_swaps = n >> 1;
 	if (num_swaps == 0) num_swaps = 1;
 
 	cout << "Numero sostituzioni per iterazione della local search: " << num_swaps << endl;

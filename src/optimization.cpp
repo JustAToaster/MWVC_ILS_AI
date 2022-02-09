@@ -276,6 +276,7 @@ bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph
 			rand_v1 = present_nodes[rand() % n_present];
 			rand_v2 = external_nodes[rand() % n_external];
 			if(graph.get_weight(rand_v2) >= graph.get_weight(rand_v1)) continue;
+			copy(curr_solution, curr_solution+n, neighbor);
 			neighbor[rand_v1] = 0;
 			neighbor[rand_v2] = 1;
 			if (graph.valid_solution(neighbor)){
