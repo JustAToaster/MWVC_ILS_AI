@@ -29,41 +29,32 @@ bool Graph::valid_solution(bool* solution){
 	return true;
 }
 
-
-void Graph::compute_degree_weight_ratio(){
-	degree_over_weight = new float[n]();
-	int degrees[n];
+void Graph::compute_degrees(){
+	degrees = new int[n];
 	fill_n(degrees, n, 0);
 	pair<int, int> edge;
 	for(int i = 0; i < num_edges; ++i){
 		edge = edges[i];
 		degrees[edge.first]++;
 	}
+}
+
+void Graph::compute_degree_weight_ratio(){
+	degree_over_weight = new float[n]();
+	compute_degrees();
 	for(int i = 0; i < n; ++i){
 		degree_over_weight[i] = (float)degrees[i]/w[i];
 	}
 }
 
-//Per ogni arco non coperto, inserisci l'estremo con rapporto degree/peso piu' alto
-void Graph::greedy_solution(bool* solution){
-	compute_degree_weight_ratio();
+//Per ogni arco non coperto, inserisci l'estremo con degree piu' alto
+//Si può usare pure per sistemare una soluzione invalida (ottenuta ad esempio da una perturbazione)
+void Graph::greedy_heuristic(bool* solution){
 	pair<int, int> edge;
 	for(int i = 0; i < num_edges; ++i){
 		edge = edges[i];
 		if (!solution[edge.first] && !solution[edge.second]){
-			if (degree_over_weight[edge.first] > degree_over_weight[edge.second]) solution[edge.first] = 1;
-			else solution[edge.second] = 1;
-		}
-	}
-}
-
-//Usa l'euristica greedy per sistemare una soluzione invalida (ottenuta ad esempio da una perturbazione)
-void Graph::fix_invalid_solution(bool* solution){
-	pair<int, int> edge;
-	for(int i = 0; i < num_edges; ++i){
-		edge = edges[i];
-		if (!solution[edge.first] && !solution[edge.second]){
-			if (degree_over_weight[edge.first] > degree_over_weight[edge.second]) solution[edge.first] = 1;
+			if (degrees[edge.first] > degrees[edge.second]) solution[edge.first] = 1;
 			else solution[edge.second] = 1;
 		}
 	}
@@ -71,7 +62,7 @@ void Graph::fix_invalid_solution(bool* solution){
 
 //Per ogni arco non coperto, il nodo tra i due da aggiungere alla soluzione viene scelto con probabilita' proporzionale al rapporto degree/peso
 //Sembra dare risultati peggiori
-void Graph::fix_invalid_solution_stochastic(bool* solution){
+void Graph::greedy_heuristic_stochastic(bool* solution){
 	pair<int, int> edge;
 	float first_node_prob;
 	for(int i = 0; i < num_edges; ++i){
@@ -103,7 +94,7 @@ void perturbation(bool* perturbed_solution, int num_elems_changed, int n){
 //Criterio di accettazione di un nuovo ottimo locale per ILS
 bool acceptance_criteria(int curr_best_weight, int prev_weight, int curr_weight, int eps, int iter_without_improvements){
 	// Se la soluzione risulta migliore della precedente o dell'ottimo attuale, accettala
-	if(curr_weight < curr_best_weight || curr_weight < prev_weight) return true;
+	if(curr_weight < prev_weight) return true;
 	// Se risulta peggiore di un epsilon e non stiamo deviando per troppo tempo, accettala
 	if(curr_weight < curr_best_weight + eps && iter_without_improvements < MAX_ITER_WITHOUT_IMPROVEMENTS) return true;
 	return false;
@@ -113,14 +104,18 @@ bool acceptance_criteria(int curr_best_weight, int prev_weight, int curr_weight,
 int epsilon_scheduling(int eps, int curr_weight, int curr_best_weight, int min_weight, int iter){
 	int new_eps;
 	if (curr_weight < curr_best_weight) new_eps = eps - 4*min_weight;
+	//Potrebbe essere interessante considerare altre funzioni di scheduling basate sul miglioramento della funzione, ma non sembra dia risultati migliori così com'è
+	//if (curr_weight < curr_best_weight) new_eps = eps - (curr_best_weight - curr_weight);
 	else new_eps = eps;
 	if (new_eps > min_weight) return new_eps;
 	else return min_weight;
 }
 
 //Scheduling del numero di bit da flippare in una perturbazione, deve diminuire col tempo per non generare soluzioni troppo lontane
-int perturbation_scheduling(int num_elems_changed, int pert_min_changes, int iter){
+int perturbation_scheduling(int num_elems_changed, int curr_weight, int curr_best_weight, int pert_min_changes, int iter){
 	int new_num_elems_changed = num_elems_changed;
+	//Diminuizioni in base al miglioramento relativo del peso non sembrano portare vantaggi
+	//float relative_improvement = (float)(curr_best_weight - curr_weight)/(float)(curr_best_weight);
 	if(!(iter & 31)) new_num_elems_changed--;
 	if(new_num_elems_changed <= pert_min_changes) new_num_elems_changed = pert_min_changes;
 	return new_num_elems_changed;

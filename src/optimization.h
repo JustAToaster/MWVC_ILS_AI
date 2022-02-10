@@ -6,7 +6,7 @@
 
 #include "Graph.h"
 
-#define MAX_ITER_WITHOUT_IMPROVEMENTS 8192
+#define MAX_ITER_WITHOUT_IMPROVEMENTS 4096
 #define MAX_OBJECTIVE_FUNCTION_EVAL 2e4
 #define MAX_LS_ITER 512
 
@@ -18,7 +18,7 @@ bool acceptance_criteria(int curr_best_weight, int prev_weight, int curr_weight,
 
 int epsilon_scheduling(int eps, int curr_weight, int curr_best_weight, int min_weight, int iter);
 
-int perturbation_scheduling(int num_elems_changed, int pert_min_changes, int pert_tries);
+int perturbation_scheduling(int num_elems_changed, int curr_weight, int curr_best_weight, int pert_min_changes, int pert_tries);
 
 void print_solution(bool* solution, int n);
 

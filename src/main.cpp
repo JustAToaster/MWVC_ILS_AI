@@ -14,7 +14,7 @@
 
 using namespace std;
 
-#define MAX_ITER 4096
+#define MAX_ITER 8192
 
 int main(int argc, char *argv[]){
 	if(argc == 1){
@@ -57,6 +57,7 @@ int main(int argc, char *argv[]){
 		read >> weight;
 		graph.add_node_weight(i, weight);
 	}
+	graph.compute_degree_weight_ratio();
 	for(int i = 0; i < n; ++i){
 		for(int j = 0; j < n; ++j){
 			read >> curr_edge;
@@ -79,7 +80,7 @@ int main(int argc, char *argv[]){
 
 	//Soluzione greedy
 	fill_n(curr_solution, n, 0);
-	graph.greedy_solution(curr_solution);
+	graph.greedy_heuristic(curr_solution);
 
 	bool* curr_best_solution = new bool[n];
 	copy(curr_solution, curr_solution+n, curr_best_solution);
@@ -103,7 +104,7 @@ int main(int argc, char *argv[]){
 	bool max_eval_reached = false;
 	
 	int eps = curr_weight >> 4;
-	if (eps < 0) eps = 0;
+	if (eps < min_weight) eps = min_weight;
 
 	int pert_min_changes = n >> 8;
 	if(pert_min_changes == 0) pert_min_changes = 1;
@@ -111,7 +112,7 @@ int main(int argc, char *argv[]){
 	int num_elems_changed = n >> 6;
 	if(num_elems_changed == 0) num_elems_changed = pert_min_changes;
 
-	int num_swaps = n >> 1;
+	int num_swaps = n;
 	if (num_swaps == 0) num_swaps = 1;
 
 	cout << "Numero sostituzioni per iterazione della local search: " << num_swaps << endl;
@@ -156,8 +157,8 @@ int main(int argc, char *argv[]){
 			}
 			prev_ils_weight = curr_weight;
 			perturbation(curr_solution, num_elems_changed, n);
-			num_elems_changed = perturbation_scheduling(num_elems_changed, pert_min_changes, iter);
-			if (!graph.valid_solution(curr_solution)) graph.fix_invalid_solution(curr_solution);
+			num_elems_changed = perturbation_scheduling(num_elems_changed, curr_weight, curr_best_weight, pert_min_changes, iter);
+			if (!graph.valid_solution(curr_solution)) graph.greedy_heuristic(curr_solution);
 		}
 		else{
 			if(VERBOSE_FLAG) cout << "Soluzione non accettata dal criterio di accettazione. Ritorno all'ottimo precedente." << endl;
