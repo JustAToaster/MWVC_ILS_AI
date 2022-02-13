@@ -14,7 +14,7 @@
 
 using namespace std;
 
-#define MAX_ITER 8192
+#define MAX_ITER 16384
 
 int main(int argc, char *argv[]){
 	if(argc == 1){
@@ -31,7 +31,7 @@ int main(int argc, char *argv[]){
 	read.open(input);
 	if(read.fail())
 	{
-		cout<< "Apertura input fallita!\n";
+		cout << "Apertura input fallita!\n";
 		exit(1);
 	}
 	write.open(input.substr(0, input.length()-4)+"_output.txt");
@@ -57,11 +57,11 @@ int main(int argc, char *argv[]){
 		read >> weight;
 		graph.add_node_weight(i, weight);
 	}
-	graph.compute_degree_weight_ratio();
 	for(int i = 0; i < n; ++i){
 		for(int j = 0; j < n; ++j){
 			read >> curr_edge;
-			if(j >= i && curr_edge){
+			//if(j >= i && curr_edge){
+			if(curr_edge){
 				edges.push_back(make_pair(i, j));
 			}
 			//cout << curr_edge << "\t";
@@ -69,7 +69,9 @@ int main(int argc, char *argv[]){
 		//cout << endl;
 	}
 
-	graph.add_edges(edges);
+	//graph.add_edges(edges);
+	graph.build_adj_lists(edges);
+	graph.compute_degree_weight_ratio();
 	//graph.print_edges();
 
 	bool* curr_solution = new bool[n];
@@ -80,7 +82,7 @@ int main(int argc, char *argv[]){
 
 	//Soluzione greedy
 	fill_n(curr_solution, n, 0);
-	graph.greedy_heuristic(curr_solution);
+	graph.greedy_heuristic_queue_prob(curr_solution);
 
 	bool* curr_best_solution = new bool[n];
 	copy(curr_solution, curr_solution+n, curr_best_solution);
@@ -103,22 +105,30 @@ int main(int argc, char *argv[]){
 	//Vero se il numero di valutazioni della funzione obiettivo supera il massimo
 	bool max_eval_reached = false;
 	
-	int eps = curr_weight >> 4;
-	if (eps < min_weight) eps = min_weight;
+	int max_eps = curr_weight >> 3;
+	int min_eps = curr_weight >> 5;
+	if (min_eps < 2*min_weight) min_eps = 2*min_weight;
+	if (max_eps < min_eps) max_eps = 2*min_eps;
+
+	int eps = max_eps;
 
 	int pert_min_changes = n >> 8;
 	if(pert_min_changes == 0) pert_min_changes = 1;
 
-	int num_elems_changed = n >> 6;
-	if(num_elems_changed == 0) num_elems_changed = pert_min_changes;
+	int pert_max_changes = n >> 5;
+	if(pert_max_changes <= pert_min_changes) pert_max_changes = pert_min_changes;
 
-	int num_swaps = n;
-	if (num_swaps == 0) num_swaps = 1;
+	int num_elems_changed = pert_max_changes;
+
+	int num_swaps = n >> 3;
+	if (num_swaps < 8) num_swaps = 8;
 
 	cout << "Numero sostituzioni per iterazione della local search: " << num_swaps << endl;
-	cout << "Valore iniziale di epsilon: " << eps << ", peso minimo: " << min_weight << endl;
+	cout << "Valore iniziale di epsilon: " << eps << ", valore minimo: " << min_eps << endl;
 	cout << "Numero di cambiamenti iniziali in una perturbazione: " << num_elems_changed << endl;
 	cout << "Numero di cambiamenti minimi in una perturbazione: " << pert_min_changes << endl << endl;
+
+	int final_iterations = MAX_ITER;
 
 	clock_t start_opt, end_opt;
 	start_opt = clock();
@@ -126,26 +136,27 @@ int main(int argc, char *argv[]){
 	//Ciclo di iterated local search
 	for(int iter = 1; iter <= MAX_ITER; ++iter){
 
-		if(VERBOSE_FLAG){
-			cout << "Local search numero " << iter << ", soluzione attuale: " << endl;
-			print_solution(curr_solution, n);
-			cout << "Peso: " << curr_weight << endl;
-		}
-
 		//Calcola l'ottimo locale a partire dalla soluzione attuale
 		//max_eval_reached = local_search(curr_solution, curr_weight, graph, n, iter, num_obj_func_eval, VERBOSE_FLAG);
-		
+
 		max_eval_reached = local_search_stochastic(curr_solution, curr_weight, graph, n, num_swaps, iter, num_obj_func_eval, VERBOSE_FLAG);
+
+		//cout << "Ls " << iter << ", valutazioni della fo " << num_obj_func_eval << endl;
 
 		if(max_eval_reached){
 			cout << "Esaurito il numero massimo di valutazioni della funzione obiettivo. Uscita..." << endl;
+			if(curr_weight < curr_best_weight){
+				curr_best_weight = curr_weight;
+				copy(curr_solution, curr_solution+n, curr_best_solution);
+			}
+			final_iterations = iter;
 			break;
 		}
 
 		// Terminata la local search, verifico il criterio di accettazione
-		eps = epsilon_scheduling(eps, curr_weight, curr_best_weight, min_weight, iter);
+		eps = epsilon_scheduling(eps, curr_weight, curr_best_weight, min_weight, min_eps);
 
-		if (VERBOSE_FLAG) cout << "Iterazione " << iter << ", valore di epsilon: " << eps  << ", numero di bit flip con una perturbazione: " << num_elems_changed << endl;
+		//cout << "Iterazione " << iter << ", valore di epsilon: " << eps  << ", numero di bit flip con una perturbazione: " << num_elems_changed << endl;
 		if(acceptance_criteria(curr_best_weight, prev_ils_weight, curr_weight, eps, iter_without_improvements)){
 			if(curr_weight < curr_best_weight){
 				curr_best_weight = curr_weight;
@@ -157,16 +168,17 @@ int main(int argc, char *argv[]){
 			}
 			prev_ils_weight = curr_weight;
 			perturbation(curr_solution, num_elems_changed, n);
-			num_elems_changed = perturbation_scheduling(num_elems_changed, curr_weight, curr_best_weight, pert_min_changes, iter);
-			if (!graph.valid_solution(curr_solution)) graph.greedy_heuristic(curr_solution);
+			num_elems_changed = perturbation_scheduling(num_elems_changed, eps, min_eps, max_eps, pert_min_changes, pert_max_changes);
+			if (!graph.valid_solution(curr_solution)) graph.greedy_heuristic_queue_prob(curr_solution);
 		}
 		else{
 			if(VERBOSE_FLAG) cout << "Soluzione non accettata dal criterio di accettazione. Ritorno all'ottimo precedente." << endl;
 			iter_without_improvements++;
+			/*
 			if(iter_without_improvements >= MAX_ITER_WITHOUT_IMPROVEMENTS){
 				cout << "Esaurito il numero di tentativi per migliorare la soluzione. Uscita da ILS..." << endl;
 				break;
-			}
+			}*/
 			copy(curr_best_solution, curr_best_solution+n, curr_solution);
 			curr_weight = curr_best_weight;
 		}
@@ -175,14 +187,17 @@ int main(int argc, char *argv[]){
 
 	end_opt = clock();
 	double runtime_ms = (end_opt - start_opt)*1.0e3/CLOCKS_PER_SEC;
-	cout << "Terminato ciclo di ottimizzazione in " << runtime_ms << " ms." << endl;
+	cout << "Terminato ciclo di ottimizzazione con " << final_iterations << " iterazioni di ILS in " << runtime_ms << " ms." << endl;
 
-	cout << "Valore finale di epsilon: " << eps << ", num cambiamenti in una perturbazione: " << num_elems_changed << endl;
+	cout << "Valore finale di epsilon: " << eps << ", numero cambiamenti in una perturbazione: " << num_elems_changed << endl;
 
 	cout << "Numero valutazioni della funzione obiettivo: " << num_obj_func_eval << endl;
 	cout << "Soluzione migliore trovata: " << endl;
 	print_solution(curr_best_solution, n);
 	cout << "Peso: " << curr_best_weight << endl;
+
+	cout << "La soluzione è valida? " << graph.valid_solution(curr_best_solution) << endl;
+	cout << "Peso calcolato: " << graph.total_weight(curr_best_solution) << endl;
 
 	//Scrivi la soluzione su file
 	for(int i = 0; i < n; ++i){

@@ -16,7 +16,8 @@ Graph::~Graph(){
 	delete w;
 	delete degree_over_weight;
 	delete degrees;
-	delete edges;
+	//delete edges;
+	delete [] adj_lists;
 }
 
 void Graph::initialize_graph_nodes(int n){
@@ -33,6 +34,13 @@ void Graph::add_edges(vector< pair<int, int> > vec_edges){
 	this->num_edges = vec_edges.size();
 	this->edges = new pair<int,int>[num_edges];
 	copy(vec_edges.begin(), vec_edges.end(), this->edges);
+}
+
+void Graph::build_adj_lists(vector< pair<int, int> > vec_edges){
+	adj_lists = new list<int>[n];
+	for(pair<int, int> edge: vec_edges){
+		adj_lists[edge.first].push_back(edge.second);
+	}
 }
 
 int Graph::get_weight(int i){
