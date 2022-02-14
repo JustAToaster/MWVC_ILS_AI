@@ -38,6 +38,8 @@ void separate_nodes_vector(bool* curr_solution, vector<int>& present_nodes, vect
 
 bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph, int n, int num_swaps, int& actual_swaps, int iter, int& num_obj_func_eval, bool VERBOSE_FLAG);
 
+bool local_search_stochastic_removals(bool* curr_solution, int& curr_weight, Graph& graph, int n, int num_removals, int num_swaps, int& actual_swaps, int iter, int& num_obj_func_eval, bool VERBOSE_FLAG);
+
 bool local_search_stochastic_vector(bool* curr_solution, int& curr_weight, Graph& graph, int n, int num_swaps, int iter, int& num_obj_func_eval, bool VERBOSE_FLAG);
 
 void build_node_queue(priority_queue< pair<float, int> >& queue, int* weights, int n, vector< pair<int, int> > uncovered_edges);

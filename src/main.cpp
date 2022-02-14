@@ -92,12 +92,12 @@ int main(int argc, char *argv[]){
 
 	//Soluzione banale, tutti i nodi. In alcuni casi potrebbe essere un miglior punto di partenza di quella greedy.
 	//fill_n(curr_solution, n, 1);
-	graph.greedy_heuristic_queue_prob(curr_solution);
+	//graph.greedy_heuristic_queue_prob(curr_solution);
 	//graph.compute_degree_weight_ratio();
 
 	//Soluzione greedy
-	//fill_n(curr_solution, n, 0);
-	//graph.greedy_heuristic_queue_prob(curr_solution);
+	fill_n(curr_solution, n, 0);
+	graph.greedy_heuristic_queue(curr_solution);
 
 	bool* curr_best_solution = new bool[n];
 	copy(curr_solution, curr_solution+n, curr_best_solution);
@@ -159,10 +159,15 @@ int main(int argc, char *argv[]){
 		//write_benchmark << iter << "," << curr_weight << "," << num_obj_func_eval << "," << eps << "," << num_elems_changed << "," << actual_swaps << endl;
 		//actual_swaps = 0;
 		//Calcola l'ottimo locale a partire dalla soluzione attuale
+		
+		//Local search esaustiva: troppo costosa
 		//max_eval_reached = local_search(curr_solution, curr_weight, graph, n, iter, num_obj_func_eval, VERBOSE_FLAG);
+		
+		//Local search campionando gli scambi
 		max_eval_reached = local_search_stochastic(curr_solution, curr_weight, graph, n, num_swaps, actual_swaps, iter, num_obj_func_eval, VERBOSE_FLAG);
-
-		//cout << "Ls " << iter << ", valutazioni della fo " << num_obj_func_eval << endl;
+		
+		//Local search campionando scambi e rimozioni. Necessaria se il numero di nodi è eccessivamente grande o si parte dalla soluzione banale, altrimenti è meglio quella che campiona solo gli scambi
+		//max_eval_reached = local_search_stochastic_removals(curr_solution, curr_weight, graph, n, 200, num_swaps, actual_swaps, iter, num_obj_func_eval, VERBOSE_FLAG);
 		
 		if(max_eval_reached){
 			cout << "Esaurito il numero massimo di valutazioni della funzione obiettivo. Uscita..." << endl;

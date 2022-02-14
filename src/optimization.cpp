@@ -9,8 +9,9 @@
 #include <algorithm>
 #include <numeric>
 #include <queue>
-#include<unordered_set>
-#include<float.h>
+#include <unordered_set>
+#include <iterator>
+#include <float.h>
 
 #include "optimization.h"
 
@@ -47,6 +48,16 @@ bool Graph::valid_solution(bool* solution){
 //Se viene rimosso un solo nodo dalla soluzione, verifica che tutti gli archi della sua lista di adiacenza siano ancora coperti
 bool Graph::valid_solution_node(int removed_node, bool* solution){
 	for (const int & second_node : adj_lists[removed_node]){
+		if(!solution[second_node]) return false;
+	}
+	return true;
+}
+
+bool Graph::valid_solution_two_nodes(int removed_node1, int removed_node2, bool* solution){
+	for (const int & second_node : adj_lists[removed_node1]){
+		if(!solution[second_node]) return false;
+	}
+	for (const int & second_node : adj_lists[removed_node2]){
 		if(!solution[second_node]) return false;
 	}
 	return true;
@@ -339,6 +350,27 @@ void separate_nodes_array(bool* curr_solution, int* present_nodes, int* external
 	}
 }
 
+int Graph::random_neighbor(int node, bool* solution, bool neighbor_present){
+	list<int> node_list = adj_lists[node];
+	int list_length = node_list.size();
+	int curr_index = -1;
+	int rand_index;
+	int curr_neighbor = 0;
+	const int MAX_TRIES = 8;
+	for(int tries = 0; tries < MAX_TRIES; ++tries){
+		rand_index = random_index(list_length);
+		for (list<int>::iterator it = node_list.begin(); it != node_list.end() && curr_index != rand_index; ++it){
+			curr_neighbor = *it;
+			curr_index++;
+		}
+		if(solution[curr_neighbor] == neighbor_present){
+			return curr_neighbor;
+		}
+	}
+	//Se non riesci a trovare un vicino buono, ritorna il nodo stesso da reinserire o rimuovere
+	return node;
+}
+
 //Local search campionando i vicini ottenuti con lo scambio
 bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph, int n, int num_swaps, int& actual_swaps, int iter, int& num_obj_func_eval, bool VERBOSE_FLAG){
 
@@ -355,7 +387,110 @@ bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph
 	bool neighbor[n];
 	int neighbor_weight = curr_weight;
 
-	int node_index, rand_v1, rand_v2;
+	int rand_node, rand_remove, rand_insert;
+
+	bool node_removed = false;
+
+	for(int ls_iter = 1; ls_iter <= MAX_LS_ITER && !ls_stuck; ++ls_iter){
+		if(VERBOSE_FLAG) cout << "Local search numero " << iter << ", iterazione " << ls_iter << ", esploro il vicinato..." << endl;
+
+		node_removed = false;
+
+		//Esplorazione vicini rimuovendo un elemento dalla soluzione attuale
+		for (int i = 0; i < n; ++i){
+			if(curr_solution[i]){
+				copy(curr_solution, curr_solution+n, neighbor);
+				neighbor[i] = 0;
+				//if (graph.valid_solution(neighbor)){
+				if (graph.valid_solution_node(i, neighbor)){
+					neighbor_weight = curr_weight - graph.get_weight(i);
+					num_obj_func_eval++;
+					if (neighbor_weight < curr_local_best_weight){
+						node_removed = true;
+						copy(neighbor, neighbor+n, curr_local_best_solution);
+						curr_local_best_weight = neighbor_weight;
+					}
+					if(num_obj_func_eval >= MAX_OBJECTIVE_FUNCTION_EVAL){
+						copy(curr_local_best_solution, curr_local_best_solution+n, curr_solution);
+						curr_weight = curr_local_best_weight;
+						return true;
+					}
+				}
+			}
+		}
+		
+		//Esplorazione vicini scambiando un elemento della soluzione attuale con uno non presente che migliora il peso
+		for(int i = 0; i < num_swaps && !node_removed; ++i){
+			rand_node = random_index(n);
+			if(curr_solution[rand_node]){
+				rand_remove = rand_node;
+				rand_insert = graph.random_neighbor(rand_remove, curr_solution, 0);
+			}
+			else{
+				rand_insert = rand_node;
+				rand_remove = graph.random_neighbor(rand_insert, curr_solution, 1);
+			}
+			if(graph.get_weight(rand_insert) >= graph.get_weight(rand_remove)) continue;
+			copy(curr_solution, curr_solution+n, neighbor);
+			neighbor[rand_remove] = 0;
+			neighbor[rand_insert] = 1;
+			//if (graph.valid_solution(neighbor)){
+			if (graph.valid_solution_node(rand_remove, neighbor)){
+				neighbor_weight = curr_weight - graph.get_weight(rand_remove) + graph.get_weight(rand_insert);
+				num_obj_func_eval++;
+				if (neighbor_weight < curr_local_best_weight){
+					actual_swaps++;
+					copy(neighbor, neighbor+n, curr_local_best_solution);
+					curr_local_best_weight = neighbor_weight;
+				}
+				if(num_obj_func_eval >= MAX_OBJECTIVE_FUNCTION_EVAL){
+					copy(curr_local_best_solution, curr_local_best_solution+n, curr_solution);
+					curr_weight = curr_local_best_weight;
+					return true;
+				}
+			}
+		}
+
+		//Aggiornamento soluzione attuale con il migliore vicino
+		copy(curr_local_best_solution, curr_local_best_solution+n, curr_solution);
+		curr_weight = curr_local_best_weight;
+
+		//cout << "Soluzione attuale: " << endl;
+		//print_solution(curr_solution, n);
+		if(VERBOSE_FLAG) cout << "Peso soluzione attuale: " << curr_weight << endl;
+
+		if(curr_weight == prev_weight){
+			if (VERBOSE_FLAG) cout << "Local search numero " << iter << ", iterazione " << ls_iter << ". Bloccato in un ottimo locale. Uscita..." << endl;
+			//print_solution(curr_local_best_solution, n);
+			ls_stuck = true;
+		}
+
+		prev_weight = curr_weight;
+
+	}
+
+	curr_weight = curr_local_best_weight;
+
+	return false;
+}
+
+//Local search campionando i vicini ottenuti con una rimozione e con due scambi
+bool local_search_stochastic_removals(bool* curr_solution, int& curr_weight, Graph& graph, int n, int num_removals, int num_swaps, int& actual_swaps, int iter, int& num_obj_func_eval, bool VERBOSE_FLAG){
+
+	bool ls_stuck = false;
+	curr_weight = graph.total_weight(curr_solution);
+	num_obj_func_eval++;
+	if(num_obj_func_eval >= MAX_OBJECTIVE_FUNCTION_EVAL) return true;
+	int prev_weight = curr_weight;
+
+	bool curr_local_best_solution[n];
+	copy(curr_solution, curr_solution+n, curr_local_best_solution);
+	int curr_local_best_weight = curr_weight;
+
+	bool neighbor[n];
+	int neighbor_weight = curr_weight;
+
+	int node_index, rand_s1_remove, rand_s1_insert, rand_s2_remove, rand_s2_insert;
 
 	int present_nodes[n];
 	int external_nodes[n];
@@ -372,9 +507,9 @@ bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph
 		separate_nodes_array(curr_solution, present_nodes, external_nodes, n_present, n_external, n);
 
 		//Esplorazione vicini rimuovendo un elemento dalla soluzione attuale
-		for (int i = 0; i < n_present; ++i){
+		for (int i = 0; i < num_removals; ++i){
 			copy(curr_solution, curr_solution+n, neighbor);
-			node_index = present_nodes[i];
+			node_index = present_nodes[random_index(n_present)];
 			neighbor[node_index] = 0;
 			//if (graph.valid_solution(neighbor)){
 			if (graph.valid_solution_node(node_index, neighbor)){
@@ -395,15 +530,21 @@ bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph
 		
 		//Esplorazione vicini scambiando un elemento della soluzione attuale con uno non presente che migliora il peso
 		for(int i = 0; i < num_swaps && !node_removed; ++i){
-			rand_v1 = present_nodes[random_index(n_present)];
-			rand_v2 = external_nodes[random_index(n_external)];
-			if(graph.get_weight(rand_v2) >= graph.get_weight(rand_v1)) continue;
+			rand_s1_remove = present_nodes[random_index(n_present)];
+			rand_s2_remove = present_nodes[random_index(n_present)];
+			if (rand_s1_remove == rand_s2_remove) continue;
+			rand_s1_insert = external_nodes[random_index(n_external)];
+			rand_s2_insert = external_nodes[random_index(n_external)];
+			if (rand_s1_insert == rand_s2_insert) continue;
+			//if(graph.get_weight(rand_v2) >= graph.get_weight(rand_v1)) continue;
 			copy(curr_solution, curr_solution+n, neighbor);
-			neighbor[rand_v1] = 0;
-			neighbor[rand_v2] = 1;
+			neighbor[rand_s1_remove] = 0;
+			neighbor[rand_s2_remove] = 0;
+			neighbor[rand_s1_insert] = 1;
+			neighbor[rand_s2_insert] = 1;
 			//if (graph.valid_solution(neighbor)){
-			if (graph.valid_solution_node(rand_v1, neighbor)){
-				neighbor_weight = curr_weight - graph.get_weight(rand_v1) + graph.get_weight(rand_v2);
+			if (graph.valid_solution_two_nodes(rand_s1_remove, rand_s2_remove, neighbor)){
+				neighbor_weight = curr_weight - graph.get_weight(rand_s1_remove) - graph.get_weight(rand_s2_remove) + graph.get_weight(rand_s1_insert) + graph.get_weight(rand_s2_insert);
 				num_obj_func_eval++;
 				if (neighbor_weight < curr_local_best_weight){
 					actual_swaps++;

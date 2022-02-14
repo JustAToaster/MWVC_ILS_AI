@@ -57,7 +57,9 @@ class Graph{
 		
 		bool valid_solution(bool* solution);
 
-		bool valid_solution_node(int node, bool* solution);
+		bool valid_solution_node(int removed_node, bool* solution);
+
+		bool valid_solution_two_nodes(int removed_node1, int removed_node2, bool* solution);
 
 		void greedy_heuristic(bool* solution);
 
@@ -68,5 +70,7 @@ class Graph{
 		void greedy_heuristic_queue(bool* solution);
 		
 		void greedy_heuristic_queue_prob(bool* solution);
+
+		int random_neighbor(int node, bool* solution, bool neighbor_present);
 
 };
