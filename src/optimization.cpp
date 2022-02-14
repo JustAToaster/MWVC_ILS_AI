@@ -16,14 +16,6 @@
 
 using namespace std;
 
-float random_01(){
-	return (float)rand()/RAND_MAX;
-}
-
-int random_index(int size){
-	return rand() % size;
-}
-
 //Funzione obiettivo, la somma dei pesi dei nodi di una soluzione
 int Graph::total_weight(bool* solution){
 	int total_weight = 0;
@@ -90,7 +82,6 @@ void Graph::greedy_heuristic(bool* solution){
 }
 
 //Per ogni arco non coperto, il nodo tra i due da aggiungere alla soluzione viene scelto con probabilita' proporzionale al rapporto degree/peso
-//Sembra dare risultati peggiori
 void Graph::greedy_heuristic_prob(bool* solution){
 	float first_node_prob;
 	for(int first_node = 0; first_node < n; ++first_node){
@@ -177,7 +168,6 @@ void build_node_queue(priority_queue< pair<float, int> >& queue, int* weights, i
 
 //Inserisci ad ogni istante il nodo ottimale che massimizza il rapporto degree/peso nel sottografo non coperto
 void Graph::greedy_heuristic_queue(bool* solution){
-	pair<int, int> rand_edge;
 	vector< pair<int, int> > uncovered_edges = compute_uncovered_edges(solution);
 	priority_queue< pair<float, int> > node_queue;
 	build_node_queue(node_queue, w, n, uncovered_edges);
@@ -189,10 +179,6 @@ void Graph::greedy_heuristic_queue(bool* solution){
 		remove_covered_edges(node_index, uncovered_edges);
 		build_node_queue(node_queue, w, n, uncovered_edges);
 	}
-}
-
-float sigmoid(float x, float threshold){
-	return 1/(1+exp(-x+threshold));
 }
 
 void Graph::greedy_heuristic_queue_prob(bool* solution){
@@ -209,22 +195,15 @@ void Graph::greedy_heuristic_queue_prob(bool* solution){
 		node_ratio = node_queue.top().first;
 		node_index = node_queue.top().second;
 		node_queue.pop();
-		node_importance = (node_ratio - min_ratio)/(max_ratio - min_ratio);
+		if(max_ratio > min_ratio) node_importance = (node_ratio - min_ratio)/(max_ratio - min_ratio);
+		else node_importance = 1.0f;
 		//Use a function to transform node importance into a probability
-		if (random_01() <= sigmoid(node_importance, -0.9f)){
-		//if (random_01() <= tanh(node_importance + 0.8f)){
+		if (random_01() <= probability_function(node_importance, +0.9f, 's')){
 			solution[node_index] = 1;
 			remove_covered_edges(node_index, uncovered_edges);
 			build_node_queue(node_queue, w, n, uncovered_edges, min_ratio, max_ratio);
 		}
 	}
-}
-
-void print_solution(bool* solution, int n){
-	for(int i = 0; i < n; ++i){
-		if(solution[i]) cout << i << "|";
-	}
-	cout << endl;
 }
 
 //Bit flip casuali su una soluzione. Potrebbe portare a soluzioni invalide, quindi va sistemata la soluzione o ripetuta la perturbazione.
@@ -346,7 +325,8 @@ bool local_search(bool* curr_solution, int& curr_weight, Graph& graph, int n, in
 void separate_nodes_array(bool* curr_solution, int* present_nodes, int* external_nodes, int& n_present, int& n_external, int n){
 	fill_n(present_nodes, n_present, 0);
 	fill_n(external_nodes, n_external, 0);
-	n_present = n_external = 0;
+	n_present = 0;
+	n_external = 0;
 	for(int i = 0; i < n; ++i){
 		if(curr_solution[i]){
 			present_nodes[n_present] = i;
@@ -360,7 +340,7 @@ void separate_nodes_array(bool* curr_solution, int* present_nodes, int* external
 }
 
 //Local search campionando i vicini ottenuti con lo scambio
-bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph, int n, int num_swaps, int iter, int& num_obj_func_eval, bool VERBOSE_FLAG){
+bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph, int n, int num_swaps, int& actual_swaps, int iter, int& num_obj_func_eval, bool VERBOSE_FLAG){
 
 	bool ls_stuck = false;
 	curr_weight = graph.total_weight(curr_solution);
@@ -375,10 +355,10 @@ bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph
 	bool neighbor[n];
 	int neighbor_weight = curr_weight;
 
-	int rand_v1, rand_v2;
+	int node_index, rand_v1, rand_v2;
 
-	int present_nodes[n] = {};
-	int external_nodes[n] = {};
+	int present_nodes[n];
+	int external_nodes[n];
 
 	int n_present = 0;
 	int n_external = 0;
@@ -392,27 +372,27 @@ bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph
 		separate_nodes_array(curr_solution, present_nodes, external_nodes, n_present, n_external, n);
 
 		//Esplorazione vicini rimuovendo un elemento dalla soluzione attuale
-		for (int i = 0; i < n; ++i){
-			if (curr_solution[i]){
-				copy(curr_solution, curr_solution+n, neighbor);
-				neighbor[i] = 0;
-				//if (graph.valid_solution(neighbor)){
-				if (graph.valid_solution_node(i, neighbor)){
-					neighbor_weight = curr_weight - graph.get_weight(i);
-					num_obj_func_eval++;
-					if (neighbor_weight < curr_local_best_weight){
-						node_removed = true;
-						copy(neighbor, neighbor+n, curr_local_best_solution);
-						curr_local_best_weight = neighbor_weight;
-					}
-					if(num_obj_func_eval >= MAX_OBJECTIVE_FUNCTION_EVAL){
-						copy(curr_local_best_solution, curr_local_best_solution+n, curr_solution);
-						curr_weight = curr_local_best_weight;
-						return true;
-					}
+		for (int i = 0; i < n_present; ++i){
+			copy(curr_solution, curr_solution+n, neighbor);
+			node_index = present_nodes[i];
+			neighbor[node_index] = 0;
+			//if (graph.valid_solution(neighbor)){
+			if (graph.valid_solution_node(node_index, neighbor)){
+				neighbor_weight = curr_weight - graph.get_weight(node_index);
+				num_obj_func_eval++;
+				if (neighbor_weight < curr_local_best_weight){
+					node_removed = true;
+					copy(neighbor, neighbor+n, curr_local_best_solution);
+					curr_local_best_weight = neighbor_weight;
+				}
+				if(num_obj_func_eval >= MAX_OBJECTIVE_FUNCTION_EVAL){
+					copy(curr_local_best_solution, curr_local_best_solution+n, curr_solution);
+					curr_weight = curr_local_best_weight;
+					return true;
 				}
 			}
 		}
+		
 		//Esplorazione vicini scambiando un elemento della soluzione attuale con uno non presente che migliora il peso
 		for(int i = 0; i < num_swaps && !node_removed; ++i){
 			rand_v1 = present_nodes[random_index(n_present)];
@@ -426,6 +406,7 @@ bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph
 				neighbor_weight = curr_weight - graph.get_weight(rand_v1) + graph.get_weight(rand_v2);
 				num_obj_func_eval++;
 				if (neighbor_weight < curr_local_best_weight){
+					actual_swaps++;
 					copy(neighbor, neighbor+n, curr_local_best_solution);
 					curr_local_best_weight = neighbor_weight;
 				}

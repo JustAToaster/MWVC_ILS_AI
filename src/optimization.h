@@ -6,6 +6,7 @@
 #include <queue>
 
 #include "Graph.h"
+#include "utilities.h"
 
 #define MAX_ITER_WITHOUT_IMPROVEMENTS 256
 #define MAX_OBJECTIVE_FUNCTION_EVAL 2e4
@@ -35,7 +36,7 @@ void separate_nodes(bool* curr_solution, int* present_nodes, int* external_nodes
 
 void separate_nodes_vector(bool* curr_solution, vector<int>& present_nodes, vector<int>& external_nodes, int n);
 
-bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph, int n, int num_swaps, int iter, int& num_obj_func_eval, bool VERBOSE_FLAG);
+bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph, int n, int num_swaps, int& actual_swaps, int iter, int& num_obj_func_eval, bool VERBOSE_FLAG);
 
 bool local_search_stochastic_vector(bool* curr_solution, int& curr_weight, Graph& graph, int n, int num_swaps, int iter, int& num_obj_func_eval, bool VERBOSE_FLAG);
 
