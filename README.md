@@ -1,5 +1,5 @@
 # Minimum Weight Vertex Cover with Iterative Local Search
-A program to solve minimum weights vertex cover with Iterative Local Search. Made as a project for the AI course at University.
+A program to estimate good solutions to minimum weights vertex cover with Iterative Local Search. Made as a project for the AI course at University.
 # Build
 Simply go to the *src* directory and *make*.
 # Usage
