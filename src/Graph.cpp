@@ -16,7 +16,6 @@ Graph::~Graph(){
 	delete w;
 	delete degree_over_weight;
 	delete degrees;
-	//delete edges;
 	delete [] adj_lists;
 }
 

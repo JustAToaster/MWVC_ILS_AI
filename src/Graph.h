@@ -49,11 +49,11 @@ class Graph{
 				
 		void compute_degree_weight_ratio();
 
+		//Seguono le funzioni specifiche al problema
+
 		vector< pair<int, int> > compute_uncovered_edges(bool* solution);
 
 		void remove_covered_edges(int added_node, vector< pair<int, int> >& uncovered_edges);
-
-		bool valid_solution_arr(bool* solution);
 		
 		bool valid_solution(bool* solution);
 

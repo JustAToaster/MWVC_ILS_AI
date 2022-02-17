@@ -27,15 +27,6 @@ int Graph::total_weight(bool* solution){
 }
 
 //Metodo per verificare la validita' di una soluzione rispetto al vincolo del problema
-bool Graph::valid_solution_arr(bool* solution){
-	pair<int, int> edge;
-	for(int i = 0; i < num_edges; ++i){
-		edge = edges[i];
-		if (!solution[edge.first] && !solution[edge.second]) return false;
-	}
-	return true;
-}
-
 bool Graph::valid_solution(bool* solution){
 	for(int first_node = 0; first_node < n; ++first_node){
 		for (const int & second_node : adj_lists[first_node]){
@@ -53,6 +44,7 @@ bool Graph::valid_solution_node(int removed_node, bool* solution){
 	return true;
 }
 
+//Se vengono rimossi due nodi dalla soluzione, verifica che tutti gli archi delle loro liste di adiacenza siano ancora coperti
 bool Graph::valid_solution_two_nodes(int removed_node1, int removed_node2, bool* solution){
 	for (const int & second_node : adj_lists[removed_node1]){
 		if(!solution[second_node]) return false;
@@ -63,6 +55,7 @@ bool Graph::valid_solution_two_nodes(int removed_node1, int removed_node2, bool*
 	return true;
 }
 
+//Salva i gradi dei nodi
 void Graph::compute_degrees(){
 	degrees = new int[n];
 	fill_n(degrees, n, 0);
@@ -71,6 +64,7 @@ void Graph::compute_degrees(){
 	}
 }
 
+//Dividi i gradi per i pesi, per ottenere una stima di importanza dei nodi
 void Graph::compute_degree_weight_ratio(){
 	degree_over_weight = new float[n]();
 	compute_degrees();
@@ -79,8 +73,8 @@ void Graph::compute_degree_weight_ratio(){
 	}
 }
 
-//Per ogni arco non coperto, inserisci l'estremo con degree piu' alto
-//Si può usare pure per sistemare una soluzione invalida (ottenuta ad esempio da una perturbazione)
+//Per ogni arco non coperto, inserisci l'estremo con grado piu' alto
+//Si può usare pure per sistemare una soluzione non valida (ottenuta ad esempio da una perturbazione)
 void Graph::greedy_heuristic(bool* solution){
 	for(int first_node = 0; first_node < n; ++first_node){
 		for (const int & second_node : adj_lists[first_node]){
@@ -106,6 +100,7 @@ void Graph::greedy_heuristic_prob(bool* solution){
 	}
 }
 
+//Calcola tutti gli archi non coperti da una soluzione
 vector< pair<int, int> > Graph::compute_uncovered_edges(bool* solution){
 	vector< pair<int, int> > uncovered_edges;
 	for(int first_node = 0; first_node < n; ++first_node){
@@ -116,6 +111,7 @@ vector< pair<int, int> > Graph::compute_uncovered_edges(bool* solution){
 	return uncovered_edges;
 }
 
+//Dopo un aggiornamento della soluzione aggiungendo un nodo, rimuovi gli archi che ora copre dal vettore di archi non coperti
 void Graph::remove_covered_edges(int added_node, vector< pair<int, int> >& uncovered_edges){
 	pair<int, int> edge;
 	for (const int & adj_node : adj_lists[added_node]){
@@ -142,6 +138,7 @@ void Graph::greedy_heuristic_stochastic(bool* solution){
 	}
 }
 
+//Costruisci una coda di priorità basata sul rapporto grado/peso nel sottografo degli archi non coperti
 void build_node_queue(priority_queue< pair<float, int> >& queue, int* weights, int n, vector< pair<int, int> > uncovered_edges){
 	queue = priority_queue< pair<float, int> >();
 	unordered_set<int> nodes;
@@ -177,7 +174,7 @@ void build_node_queue(priority_queue< pair<float, int> >& queue, int* weights, i
 	}
 }
 
-//Inserisci ad ogni istante il nodo ottimale che massimizza il rapporto degree/peso nel sottografo non coperto
+//Inserisci ad ogni istante il nodo ottimale che massimizza il rapporto grado/peso nel sottografo degli archi non coperti
 void Graph::greedy_heuristic_queue(bool* solution){
 	vector< pair<int, int> > uncovered_edges = compute_uncovered_edges(solution);
 	priority_queue< pair<float, int> > node_queue;
@@ -192,6 +189,7 @@ void Graph::greedy_heuristic_queue(bool* solution){
 	}
 }
 
+//Versione randomizzata del miglior algoritmo greedy, per dare più possibilità a nodi apparentemente meno ottimali
 void Graph::greedy_heuristic_queue_prob(bool* solution){
 	pair<int, int> rand_edge;
 	vector< pair<int, int> > uncovered_edges = compute_uncovered_edges(solution);
@@ -238,8 +236,8 @@ bool acceptance_criteria(int curr_best_weight, int prev_weight, int curr_weight,
 //Scheduling della variabile epsilon, che definisce la deviazione massima concessa rispetto al migliore attuale
 int epsilon_scheduling(int eps, int curr_weight, int curr_best_weight, int min_weight, int min_eps){
 	int new_eps;
+	//Decrementi costanti o in base al miglioramento non sembrano avere chiare differenze
 	//if (curr_weight < curr_best_weight) new_eps = eps - 2*min_weight;
-	//Potrebbe essere interessante considerare altre funzioni di scheduling basate sul miglioramento della funzione, ma non sembra dia risultati migliori così com'è
 	if (curr_weight < curr_best_weight) new_eps = eps - ((curr_best_weight - curr_weight) << 1);
 	else new_eps = eps;
 	if (new_eps > min_eps) return new_eps;
@@ -253,7 +251,7 @@ int perturbation_scheduling(int num_elems_changed, float eps, float min_eps, flo
 	return new_num_elems_changed;
 }
 
-//Ricerca locale con sostituzioni o rimozioni di nodi dalla soluzione. Ritorna true se il numero di valutazioni della funzione obiettivo supera il massimo
+//Local search con sostituzioni o rimozioni di nodi dalla soluzione. Ritorna true se il numero di valutazioni della funzione obiettivo supera il massimo
 bool local_search(bool* curr_solution, int& curr_weight, Graph& graph, int n, int iter, int& num_obj_func_eval, bool VERBOSE_FLAG){
 
 	bool ls_stuck = false;
@@ -333,6 +331,7 @@ bool local_search(bool* curr_solution, int& curr_weight, Graph& graph, int n, in
 	return false;
 }
 
+//Separa nodi presenti e non presenti in due array di interi con gli indici dei nodi
 void separate_nodes_array(bool* curr_solution, int* present_nodes, int* external_nodes, int& n_present, int& n_external, int n){
 	fill_n(present_nodes, n_present, 0);
 	fill_n(external_nodes, n_external, 0);
@@ -350,6 +349,7 @@ void separate_nodes_array(bool* curr_solution, int* present_nodes, int* external
 	}
 }
 
+//Prendi un vicino casuale dalla lista di adiacenza
 int Graph::random_neighbor(int node, bool* solution, bool neighbor_present){
 	list<int> node_list = adj_lists[node];
 	int list_length = node_list.size();
@@ -474,7 +474,7 @@ bool local_search_stochastic(bool* curr_solution, int& curr_weight, Graph& graph
 	return false;
 }
 
-//Local search campionando i vicini ottenuti con una rimozione e con due scambi
+//Local search campionando i vicini ottenuti con una rimozione e con due scambi casuali
 bool local_search_stochastic_removals(bool* curr_solution, int& curr_weight, Graph& graph, int n, int num_removals, int num_swaps, int& actual_swaps, int iter, int& num_obj_func_eval, bool VERBOSE_FLAG){
 
 	bool ls_stuck = false;
@@ -490,13 +490,7 @@ bool local_search_stochastic_removals(bool* curr_solution, int& curr_weight, Gra
 	bool neighbor[n];
 	int neighbor_weight = curr_weight;
 
-	int node_index, rand_s1_remove, rand_s1_insert, rand_s2_remove, rand_s2_insert;
-
-	int present_nodes[n];
-	int external_nodes[n];
-
-	int n_present = 0;
-	int n_external = 0;
+	int node_index = 0, rand_s1_remove = 0, rand_s1_insert = 0, rand_s2_remove = 0, rand_s2_insert = 0;
 
 	bool node_removed = false;
 
@@ -504,47 +498,76 @@ bool local_search_stochastic_removals(bool* curr_solution, int& curr_weight, Gra
 		if(VERBOSE_FLAG) cout << "Local search numero " << iter << ", iterazione " << ls_iter << ", esploro il vicinato..." << endl;
 
 		node_removed = false;
-		separate_nodes_array(curr_solution, present_nodes, external_nodes, n_present, n_external, n);
 
 		//Esplorazione vicini rimuovendo un elemento dalla soluzione attuale
 		for (int i = 0; i < num_removals; ++i){
-			copy(curr_solution, curr_solution+n, neighbor);
-			node_index = present_nodes[random_index(n_present)];
-			neighbor[node_index] = 0;
-			//if (graph.valid_solution(neighbor)){
-			if (graph.valid_solution_node(node_index, neighbor)){
-				neighbor_weight = curr_weight - graph.get_weight(node_index);
-				num_obj_func_eval++;
-				if (neighbor_weight < curr_local_best_weight){
-					node_removed = true;
-					copy(neighbor, neighbor+n, curr_local_best_solution);
-					curr_local_best_weight = neighbor_weight;
-				}
-				if(num_obj_func_eval >= MAX_OBJECTIVE_FUNCTION_EVAL){
-					copy(curr_local_best_solution, curr_local_best_solution+n, curr_solution);
-					curr_weight = curr_local_best_weight;
-					return true;
+			node_index = random_index(n);
+			if(curr_solution[node_index]){
+				copy(curr_solution, curr_solution+n, neighbor);
+				neighbor[node_index] = 0;
+				//if (graph.valid_solution(neighbor)){
+				if (graph.valid_solution_node(node_index, neighbor)){
+					neighbor_weight = curr_weight - graph.get_weight(node_index);
+					num_obj_func_eval++;
+					if (neighbor_weight < curr_local_best_weight){
+						node_removed = true;
+						copy(neighbor, neighbor+n, curr_local_best_solution);
+						curr_local_best_weight = neighbor_weight;
+					}
+					if(num_obj_func_eval >= MAX_OBJECTIVE_FUNCTION_EVAL){
+						copy(curr_local_best_solution, curr_local_best_solution+n, curr_solution);
+						curr_weight = curr_local_best_weight;
+						return true;
+					}
 				}
 			}
 		}
 		
 		//Esplorazione vicini scambiando un elemento della soluzione attuale con uno non presente che migliora il peso
 		for(int i = 0; i < num_swaps && !node_removed; ++i){
-			rand_s1_remove = present_nodes[random_index(n_present)];
-			rand_s2_remove = present_nodes[random_index(n_present)];
-			if (rand_s1_remove == rand_s2_remove) continue;
-			rand_s1_insert = external_nodes[random_index(n_external)];
-			rand_s2_insert = external_nodes[random_index(n_external)];
-			if (rand_s1_insert == rand_s2_insert) continue;
-			//if(graph.get_weight(rand_v2) >= graph.get_weight(rand_v1)) continue;
 			copy(curr_solution, curr_solution+n, neighbor);
-			neighbor[rand_s1_remove] = 0;
-			neighbor[rand_s2_remove] = 0;
-			neighbor[rand_s1_insert] = 1;
-			neighbor[rand_s2_insert] = 1;
+			node_index = random_index(n);
+			if(curr_solution[node_index]){
+				rand_s1_remove = node_index;
+				rand_s1_insert = graph.random_neighbor(rand_s1_remove, curr_solution, 0);
+			}
+			else{
+				rand_s1_insert = node_index;
+				rand_s1_remove = graph.random_neighbor(rand_s1_insert, curr_solution, 1);
+			}
+			node_index = random_index(n);
+			if(curr_solution[node_index]){
+				rand_s2_remove = node_index;
+				rand_s1_insert = graph.random_neighbor(rand_s1_remove, curr_solution, 0);
+			}
+			else{
+				rand_s2_insert = node_index;
+				rand_s2_remove = graph.random_neighbor(rand_s2_insert, curr_solution, 1);
+			}
+			rand_s2_remove = random_index(n);
+			//Se si è pescato un solo nodo da rimuovere, effettua un singolo swap con s1
+			if (rand_s1_remove == rand_s2_remove){
+				neighbor_weight = curr_weight - graph.get_weight(rand_s1_remove) + graph.get_weight(rand_s1_insert);
+				neighbor[rand_s1_remove] = 0;
+				neighbor[rand_s1_insert] = 0;
+			}
+			else{
+				//Inizialmente sfida la fortuna rimuovendo due nodi diversi e inserendone uno solo
+				neighbor_weight = curr_weight - graph.get_weight(rand_s1_remove) - graph.get_weight(rand_s2_remove) + graph.get_weight(rand_s1_insert);
+				neighbor[rand_s1_remove] = 0;
+				neighbor[rand_s2_remove] = 0;
+				neighbor[rand_s1_insert] = 1;
+				if(!graph.valid_solution_two_nodes(rand_s1_remove, rand_s2_remove, neighbor) && rand_s1_insert != rand_s2_insert){
+					neighbor_weight = curr_weight - graph.get_weight(rand_s1_remove) - graph.get_weight(rand_s2_remove) + graph.get_weight(rand_s1_insert) + graph.get_weight(rand_s2_insert);
+					neighbor[rand_s1_remove] = 0;
+					neighbor[rand_s2_remove] = 0;
+					neighbor[rand_s1_insert] = 1;
+					neighbor[rand_s2_insert] = 1;
+				}
+			}
+			//if(graph.get_weight(rand_v2) >= graph.get_weight(rand_v1)) continue;
 			//if (graph.valid_solution(neighbor)){
 			if (graph.valid_solution_two_nodes(rand_s1_remove, rand_s2_remove, neighbor)){
-				neighbor_weight = curr_weight - graph.get_weight(rand_s1_remove) - graph.get_weight(rand_s2_remove) + graph.get_weight(rand_s1_insert) + graph.get_weight(rand_s2_insert);
 				num_obj_func_eval++;
 				if (neighbor_weight < curr_local_best_weight){
 					actual_swaps++;
@@ -589,7 +612,7 @@ void separate_nodes_vector(bool* curr_solution, vector<int>& present_nodes, vect
 	}
 }
 
-//Versione con vector per evitare di ricreare gli array ogni volta, ma in realtà non sembra più (alla fine le iterazioni delle singole local search sono poche)
+//Versione con vector per aggiungere e rimuovere elementi facilmente, realtà non sembra più efficiente (alla fine le iterazioni delle singole local search sono poche)
 bool local_search_stochastic_vector(bool* curr_solution, int& curr_weight, Graph& graph, int n, int num_swaps, int iter, int& num_obj_func_eval, bool VERBOSE_FLAG){
 	bool ls_stuck = false;
 	curr_weight = graph.total_weight(curr_solution);

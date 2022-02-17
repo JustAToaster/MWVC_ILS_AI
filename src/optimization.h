@@ -28,8 +28,6 @@ int perturbation_scheduling(int num_elems_changed, float eps, float min_eps, flo
 
 void print_solution(bool* solution, int n);
 
-float sigmoid(float x, float threshold);
-
 bool local_search(bool* curr_solution, int& curr_weight, Graph& graph, int n, int iter, int& num_obj_func_eval, bool VERBOSE_FLAG);
 
 void separate_nodes(bool* curr_solution, int* present_nodes, int* external_nodes, int& n_present, int& n_external, int n);
