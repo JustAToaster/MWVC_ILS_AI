@@ -211,7 +211,7 @@ int main(int argc, char *argv[]){
 			prev_ils_weight = curr_weight;
 			perturbation(curr_solution, num_elems_changed, n);
 			num_elems_changed = perturbation_scheduling(num_elems_changed, eps, min_eps, max_eps, pert_min_changes, pert_max_changes);
-			if (!graph.valid_solution(curr_solution)) graph.greedy_heuristic_queue_prob(curr_solution);
+			if (!graph.valid_solution(curr_solution)) graph.greedy_heuristic_vec_prob(curr_solution);
 		}
 		else{
 			if(VERBOSE_FLAG) cout << "Soluzione non accettata dal criterio di accettazione. Ritorno all'ottimo precedente." << endl;

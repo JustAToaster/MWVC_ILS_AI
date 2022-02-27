@@ -198,6 +198,7 @@ void Graph::greedy_heuristic_queue_prob(bool* solution){
 	float max_ratio = FLT_MIN;
 	build_node_queue(node_queue, w, n, uncovered_edges, min_ratio, max_ratio);
 	int node_index;
+	int best_node_index = node_queue.top().second;
 	float node_ratio;
 	float node_importance = 1.0f;
 	while(uncovered_edges.size() > 0){
@@ -206,12 +207,56 @@ void Graph::greedy_heuristic_queue_prob(bool* solution){
 		node_queue.pop();
 		if(max_ratio > min_ratio) node_importance = (node_ratio - min_ratio)/(max_ratio - min_ratio);
 		else node_importance = 1.0f;
-		//Use a function to transform node importance into a probability
-		if (random_01() <= probability_function(node_importance, +0.9f, 's')){
+		//Usa una funzione per trasformare l'importanza del nodo in probabilità di essere inserito
+		if (random_01() <= probability_function(node_importance, -0.5f, 's')){
 			solution[node_index] = 1;
 			remove_covered_edges(node_index, uncovered_edges);
 			build_node_queue(node_queue, w, n, uncovered_edges, min_ratio, max_ratio);
+			best_node_index = node_queue.top().second;
 		}
+		//Gestisci caso limite in cui nessun nodo viene scelto
+		if(node_queue.empty()){
+			solution[best_node_index] = 1;
+			remove_covered_edges(best_node_index, uncovered_edges);
+			build_node_queue(node_queue, w, n, uncovered_edges, min_ratio, max_ratio);
+			best_node_index = node_queue.top().second;
+		}
+	}
+}
+
+void build_node_vec(vector< pair<float, int> >& node_vec, int* weights, int n, vector< pair<int, int> > uncovered_edges){
+	node_vec = vector< pair<float, int> >();
+	unordered_set<int> nodes;
+	int degrees[n] = {};
+	float node_ratio;
+	for(pair<int, int> edge: uncovered_edges){
+		degrees[edge.first]++;
+		degrees[edge.second]++;
+		nodes.insert(edge.first);
+		nodes.insert(edge.second);
+	}
+	for(const int& node: nodes){
+		node_ratio = (float)degrees[node]/(float)weights[node];
+		node_vec.push_back(make_pair(node_ratio, node));
+	}
+	sort(node_vec.begin(), node_vec.end(), [](const pair<float, int>& x, const pair<float, int>& y) { return x.first > y.first; } );
+}
+
+//Versione dell'algoritmo greedy randomizzato con vettore e prendendo un indice normale casuale
+void Graph::greedy_heuristic_vec_prob(bool* solution){
+	pair<int, int> rand_edge;
+	vector< pair<int, int> > uncovered_edges = compute_uncovered_edges(solution);
+	vector< pair<float, int> > node_vec;
+	build_node_vec(node_vec, w, n, uncovered_edges);
+	int index_std = 1;
+	int vec_index, node_index;
+	while(uncovered_edges.size() > 0 && node_vec.size() > 0){
+		vec_index = random_normal_index(0, index_std);
+		if(vec_index >= (int)node_vec.size()) vec_index = node_vec.size() - 1;
+		node_index = node_vec.at(vec_index).second;
+		solution[node_index] = 1;
+		remove_covered_edges(node_index, uncovered_edges);
+		build_node_vec(node_vec, w, n, uncovered_edges);
 	}
 }
 

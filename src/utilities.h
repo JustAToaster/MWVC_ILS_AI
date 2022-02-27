@@ -10,6 +10,8 @@ float random_01();
 
 int random_index(int size);
 
+int random_normal_index(int mean, int std);
+
 void print_solution(bool* solution, int n);
 
 void print_array(int* array, int n);

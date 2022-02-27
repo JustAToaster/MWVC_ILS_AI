@@ -24,6 +24,13 @@ int random_index(int size){
     return uniform_distribution(re);
 }
 
+int random_normal_index(int mean, int std){
+    random_device rd;
+    default_random_engine re(rd());
+    normal_distribution<float> normal_distribution((float)mean, (float)std);
+    return (int)abs(normal_distribution(re));
+}
+
 /*
 float random_01(){
 	return (float)rand()/RAND_MAX;
@@ -33,13 +40,13 @@ int random_index(int size){
 	return rand() % size;
 }
 */
-float probability_function(float x, float threshold, char function){
+float probability_function(float x, float bias, char function){
 	//Sigmoide
-	if (function == 's') return 1/(1+exp(-x+threshold));
+	if (function == 's') return 1/(1+exp(-x+bias));
 	//Tangente iperbolica
-	if (function == 't') return tanh(x+threshold);
+	if (function == 't') return tanh(x+bias);
 	//Esponenziale semplice
-	if (function == 'e') return 1-exp(-x+threshold);
+	if (function == 'e') return 1-exp(-x+bias);
 	return x;
 }
 

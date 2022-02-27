@@ -43,3 +43,5 @@ bool local_search_stochastic_vector(bool* curr_solution, int& curr_weight, Graph
 void build_node_queue(priority_queue< pair<float, int> >& queue, int* weights, int n, vector< pair<int, int> > uncovered_edges);
 
 void build_node_queue(priority_queue< pair<float, int> >& queue, int* weights, int n, vector< pair<int, int> > uncovered_edges, float& min_ratio, float& max_ratio);
+
+void build_node_vec(vector< pair<float, int> >& node_vec, int* weights, int n, vector< pair<int, int> > uncovered_edges);

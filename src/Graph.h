@@ -71,6 +71,8 @@ class Graph{
 		
 		void greedy_heuristic_queue_prob(bool* solution);
 
+		void greedy_heuristic_vec_prob(bool* solution);
+
 		int random_neighbor(int node, bool* solution, bool neighbor_present);
 
 };
