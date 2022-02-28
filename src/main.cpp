@@ -168,7 +168,9 @@ int main(int argc, char *argv[]){
 
 	//Ciclo di iterated local search
 	for(int iter = 1; iter <= MAX_ITER; ++iter){
-		
+		perturbation(curr_solution, num_elems_changed, n);
+		num_elems_changed = perturbation_scheduling(num_elems_changed, eps, min_eps, max_eps, pert_min_changes, pert_max_changes);
+		if (!graph.valid_solution(curr_solution)) graph.greedy_heuristic_vec_prob(curr_solution);
 		//write_benchmark << iter << "," << curr_weight << "," << num_obj_func_eval << "," << eps << "," << num_elems_changed << "," << actual_swaps << endl;
 
 		//Calcola l'ottimo locale a partire dalla soluzione attuale
@@ -209,9 +211,6 @@ int main(int argc, char *argv[]){
 				iter_without_improvements++;
 			}
 			prev_ils_weight = curr_weight;
-			perturbation(curr_solution, num_elems_changed, n);
-			num_elems_changed = perturbation_scheduling(num_elems_changed, eps, min_eps, max_eps, pert_min_changes, pert_max_changes);
-			if (!graph.valid_solution(curr_solution)) graph.greedy_heuristic_vec_prob(curr_solution);
 		}
 		else{
 			if(VERBOSE_FLAG) cout << "Soluzione non accettata dal criterio di accettazione. Ritorno all'ottimo precedente." << endl;
@@ -238,7 +237,7 @@ int main(int argc, char *argv[]){
 	print_solution(curr_best_solution, n);
 	cout << "Peso: " << curr_best_weight << endl;
 
-	cout << "La soluzione è valida? " << graph.valid_solution(curr_best_solution) << endl;
+	cout << "La soluzione e' valida? " << graph.valid_solution(curr_best_solution) << endl;
 
 	//Scrivi la soluzione su file
 	for(int i = 0; i < n; ++i){
